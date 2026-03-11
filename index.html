@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Task Manager</title>
+    <!-- আইকনের জন্য FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --container-bg: #ffffff;
+            --text-color: #333;
+            --primary-color: #6c5ce7;
+            --border-color: #ddd;
+            --high-priority: #ff7675;
+            --medium-priority: #fdcb6e;
+            --low-priority: #55efc4;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* Dark Mode Variables */
+        body.dark-mode {
+            --bg-color: #1e1e2e;
+            --container-bg: #2d2d44;
+            --text-color: #e0e0e0;
+            --border-color: #444;
+            --shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background 0.3s, color 0.3s;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--container-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        /* Header & Dark Mode Toggle */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        h1 { font-size: 1.5rem; }
+
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--text-color);
+            color: var(--text-color);
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        /* Input Section */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        input, select, button {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--container-bg);
+            color: var(--text-color);
+            outline: none;
+        }
+
+        input[type="text"] { flex: 2; }
+        input[type="date"] { flex: 1; }
+        select { flex: 1; }
+
+        button.add-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        button.add-btn:hover { opacity: 0.9; }
+
+        /* Task List */
+        ul { list-style: none; }
+
+        .task-item {
+            background: var(--container-bg);
+            border: 1px solid var(--border-color);
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .task-item:active { cursor: grabbing; }
+        .task-item.dragging { opacity: 0.5; border: 2px dashed var(--primary-color); }
+
+        .task-info { flex: 1; }
+        .task-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
+        .task-meta { font-size: 0.85rem; color: #777; display: flex; gap: 10px; align-items: center; }
+        
+        /* Priority Badges */
+        .badge { padding: 2px 8px; border-radius: 4px; color: #333; font-weight: bold; font-size: 0.75rem; }
+        .high { background-color: var(--high-priority); }
+        .medium { background-color: var(--medium-priority); }
+        .low { background-color: var(--low-priority); }
+
+        .category-tag { background: #eee; color: #555; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+
+        /* Actions */
+        .actions { display: flex; gap: 10px; }
+        
+        .btn-action {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            color: #777;
+        }
+        
+        .btn-action:hover { color: var(--primary-color); }
+        .btn-delete:hover { color: #ff7675; }
+
+        .completed .task-title { text-decoration: line-through; opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1><i class="fas fa-check-circle"></i> টাস্ক ম্যানেজার</h1>
+        <button class="theme-toggle" onclick="toggleDarkMode()">
+            <i class="fas fa-moon"></i> ডার্ক মোড
+        </button>
+    </header>
+
+    <div class="input-group">
+        <div class="row">
+            <input type="text" id="taskInput" placeholder="নতুন কাজ লিখুন...">
+            <input type="date" id="dateInput">
+        </div>
+        <div class="row">
+            <select id="categoryInput">
+                <option value="Work">কাজ (Work)</option>
+                <option value="Personal">ব্যক্তিগত (Personal)</option>
+                <option value="Study">পড়াশোনা (Study)</option>
+            </select>
+            <select id="priorityInput">
+                <option value="High">উচ্চ (High)</option>
+                <option value="Medium">মাঝারি (Medium)</option>
+                <option value="Low">নিম্ন (Low)</option>
+            </select>
+            <button class="add-btn" onclick="addTask()">যোগ করুন</button>
+        </div>
+    </div>
+
+    <ul id="taskList">
+        <!-- টাস্কগুলো এখানে জেনারেট হবে -->
+    </ul>
+</div>
+
+<script>
+    // DOM Elements
+    const taskInput = document.getElementById('taskInput');
+    const dateInput = document.getElementById('dateInput');
+    const categoryInput = document.getElementById('categoryInput');
+    const priorityInput = document.getElementById('priorityInput');
+    const taskList = document.getElementById('taskList');
+
+    // State Management
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        renderTasks();
+        checkDarkMode();
+    });
+
+    // 1. Add Task Function
+    function addTask() {
+        const text = taskInput.value.trim();
+        const date = dateInput.value;
+        const category = categoryInput.value;
+        const priority = priorityInput.value;
+
+        if (text === '') {
+            alert('দয়া করে একটি কাজ লিখুন!');
+            return;
+        }
+
+        const newTask = {
+            id: Date.now(),
+            text: text,
+            date: date,
+            category: category,
+            priority: priority,
+            completed: false
+        };
+
+        tasks.push(newTask);
+        saveData();
+        renderTasks();
+        
+        // Reset inputs
+        taskInput.value = '';
+        dateInput.value = '';
+    }
+
+    // 2. Render Tasks Function
+    function renderTasks() {
+        taskList.innerHTML = '';
+        
+        tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.classList.add('task-item');
+            li.setAttribute('draggable', 'true');
+            li.setAttribute('data-id', task.id);
+
+            // Priority Class
+            let priorityClass = '';
+            if(task.priority === 'High') priorityClass = 'high';
+            else if(task.priority === 'Medium') priorityClass = 'medium';
+            else priorityClass = 'low';
+
+            li.innerHTML = `
+                <div class="task-info">
+                    <div class="task-title ${task.completed ? 'completed' : ''}">${task.text}</div>
+                    <div class="task-meta">
+                        <span class="badge ${priorityClass}">${task.priority}</span>
+                        <span class="category-tag">${task.category}</span>
+                        ${task.date ? `<span><i class="far fa-calendar-alt"></i> ${task.date}</span>` : ''}
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn-action" onclick="toggleComplete(${task.id})">
+                        <i class="${task.completed ? 'far fa-check-square' : 'far fa-square'}"></i>
+                    </button>
+                    <button class="btn-action btn-delete" onclick="deleteTask(${task.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+
+            // Drag and Drop Events
+            addDragEvents(li);
+            taskList.appendChild(li);
+        });
+    }
+
+    // 3. Delete Task
+    function deleteTask(id) {
+        tasks = tasks.filter(task => task.id !== id);
+        saveData();
+        renderTasks();
+    }
+
+    // 4. Toggle Complete
+    function toggleComplete(id) {
+        tasks = tasks.map(task => {
+            if (task.id === id) {
+                return { ...task, completed: !task.completed };
+            }
+            return task;
+        });
+        saveData();
+        renderTasks();
+    }
+
+    // 5. Local Storage
+    function saveData() {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    // 6. Dark Mode Logic
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    function checkDarkMode() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+    }
+
+    // 7. Drag and Drop Logic
+    let draggedItem = null;
+
+    function addDragEvents(item) {
+        item.addEventListener('dragstart', () => {
+            draggedItem = item;
+            setTimeout(() => item.classList.add('dragging'), 0);
+        });
+
+        item.addEventListener('dragend', () => {
+            setTimeout(() => {
+                item.classList.remove('dragging');
+                draggedItem = null;
+                updateTaskOrder();
+            }, 0);
+        });
+    }
+
+    taskList.addEventListener('dragover', e => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(taskList, e.clientY);
+        if (afterElement == null) {
+            taskList.appendChild(draggedItem);
+        } else {
+            taskList.insertBefore(draggedItem, afterElement);
+        }
+    });
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function updateTaskOrder() {
+        const newOrderIds = [...taskList.querySelectorAll('.task-item')].map(li => parseInt(li.getAttribute('data-id')));
+        
+        // Reorder the tasks array based on new DOM order
+        tasks.sort((a, b) => {
+            return newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id);
+        });
+        
+        saveData();
+    }
+</script>
+
+</body>
+</html>
